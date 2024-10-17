@@ -9,6 +9,7 @@ class Machine {
 
     // initialize heap
     private val heap: IntArray = IntArray(HEAP_MAX_SIZE) { 0 }
+
     // functions...
     private val functions: Array<Func>
 
@@ -206,6 +207,14 @@ class Machine {
                 // gt >=
                 22 -> {
                     logOp { left, right -> left >= right }
+                }
+                // shl <<
+                23 -> {
+                    binOp { left, right -> left shl right }
+                }
+                // shr >>
+                24 -> {
+                    binOp { left, right -> left shr right }
                 }
 
                 else -> {
