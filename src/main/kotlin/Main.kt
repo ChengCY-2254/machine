@@ -3,7 +3,8 @@ package com.github.cheng
 fun main() {
     testAdd()
 }
-fun testAdd(){
+
+fun testAdd() {
     val machine = Machine(
         arrayOf(
             Function(
@@ -12,8 +13,8 @@ fun testAdd(){
                 returns = true,
                 code = arrayOf(
                     // a,b => a+b
-                    Instruction(6,0),
-                    Instruction(6,1),
+                    Instruction(6, 0),
+                    Instruction(6, 1),
                     Instruction(9)
                 )
             ),
@@ -22,8 +23,8 @@ fun testAdd(){
                 nprams = 2,
                 returns = true,
                 arrayOf(
-                    Instruction(6,0),
-                    Instruction(6,1),
+                    Instruction(6, 0),
+                    Instruction(6, 1),
                     Instruction(9),
                     Instruction(8)
                 )
@@ -38,39 +39,39 @@ fun testAdd(){
         machine.execute(
             arrayOf(
                 // push address 5
-                Instruction(1,result2Address),
+                Instruction(1, result2Address),
                 // push address 1
-                Instruction(1,result1Address),
+                Instruction(1, result1Address),
                 // push number 5
-                Instruction(1,5),
+                Instruction(1, 5),
                 // push number 6
-                Instruction(1,6),
+                Instruction(1, 6),
                 // call add function
-                Instruction(5,0),
+                Instruction(5, 0),
                 // store
                 Instruction(4),
                 // push 11
-                Instruction(1,11),
+                Instruction(1, 11),
                 // push address 1
-                Instruction(1,result1Address),
+                Instruction(1, result1Address),
                 // load
                 Instruction(3),
                 // call A equals b
-                Instruction(5,1),
+                Instruction(5, 1),
                 // store
                 Instruction(4),
-                ),null
+            ), null
         )
-    }catch (e:Break){
-        if (e.because is Because.Return){
+    } catch (e: Break) {
+        if (e.because is Because.Return) {
             //ignore
-        }else{
+        } else {
             throw e
         }
     }
 
-    val result = machine.load(result1Address)
-    val resultBool = machine.load(result2Address)
+    val result = machine.load(result1Address) == 11
+    val result2 = machine.load(result2Address) == 22
     println("machine: result is 11 $result")
-    println("machine: result equals 22 $resultBool")
+    println("machine: result equals 22 $result2")
 }
