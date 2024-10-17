@@ -9,6 +9,7 @@ class Machine {
 
     // initialize heap
     private val heap: IntArray = IntArray(HEAP_MAX_SIZE) { 0 }
+    // functions...
     private val functions: Array<Func>
 
     /**
@@ -23,7 +24,7 @@ class Machine {
         this.sp -= 1
         val element = this.stack[this.sp]
         //clean
-        this.stack[this.sp]=0
+        this.stack[this.sp] = 0
         return element
     }
 
@@ -215,15 +216,15 @@ class Machine {
         }
     }
 
-    companion object
+    companion object;
 
-    fun binOp(logic: (left: Int, right: Int) -> Int) {
+    private fun binOp(logic: (left: Int, right: Int) -> Int) {
         val left = this.pop()
         val right = this.pop()
         this.push(logic(left, right))
     }
 
-    fun logOp(logic: (left: Int, right: Int) -> Boolean) {
+    private fun logOp(logic: (left: Int, right: Int) -> Boolean) {
         val left = this.pop()
         val right = this.pop()
         if (logic(left, right)) {
@@ -272,6 +273,8 @@ data class NativeFunction(
 data class Instruction(val op: Int, val args: Int, val args1: Int, val body: Array<Instruction>?) {
     constructor(op: Int) : this(op, 0, 0, null)
     constructor(op: Int, args: Int) : this(op, args, 0, null)
+
+    //暂时无用
     constructor(op: Int, args: Int, body: Array<Instruction>) : this(op, args, 0, body)
 
     override fun toString(): String {
