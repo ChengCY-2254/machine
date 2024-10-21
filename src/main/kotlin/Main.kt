@@ -1,12 +1,14 @@
 package com.github.cheng
 
+import com.github.cheng.Machine.Companion.create
+
 fun main() {
     testAdd()
 }
 
 fun testAdd() {
-    val machine = Machine(
-        arrayOf(
+    val machine = Machine.new().apply {
+        this.functions = arrayOf(
             Function(
                 funcName = "add function",
                 nprams = 2,
@@ -22,52 +24,53 @@ fun testAdd() {
                 funcName = "A equals b",
                 nprams = 2,
                 returns = true,
-                arrayOf(
-                    Instruction(6, 0),
-                    Instruction(6, 1),
-                    Instruction(9),
-                    Instruction(8)
-                )
-
-            )
+                buildInstruction {
+                    pair(6, 0)
+                    pair(6, 1)
+                    single(9)
+                    single(8)
+                }
+            ),
+            NativeFunction(
+                funcName = "print current value",
+                nprams = 1,
+                returns = false
+            ) {
+                val cur = it[0]
+                println("current value is $cur")
+                this.push(cur)
+            }
         )
-    )
+    }.create()
 
     val result1Address = 1
     val result2Address = 5
-    try {
-        machine.execute(
-            arrayOf(
-                // push address 5
-                Instruction(1, result2Address),
-                // push address 1
-                Instruction(1, result1Address),
-                // push number 5
-                Instruction(1, 5),
-                // push number 6
-                Instruction(1, 6),
-                // call add function
-                Instruction(5, 0),
-                // store
-                Instruction(4),
-                // push 11
-                Instruction(1, 11),
-                // push address 1
-                Instruction(1, result1Address),
-                // load
-                Instruction(3),
-                // call A equals b
-                Instruction(5, 1),
-                // store
-                Instruction(4),
-            ), null
-        )
-    } catch (e: Break) {
-        if (e.because is Because.Return) {
-            //ignore
-        } else {
-            throw e
-        }
+
+    machine.run {
+        // push address 5
+        pair(1, result2Address)
+        // push address 1
+        pair(1, result1Address)
+        // push number 5
+        pair(1, 5)
+        // push number 6
+        pair(1, 6)
+        // call add function
+        pair(5, 0)
+        // store
+        single(4)
+        // push 11
+        pair(1, 11)
+        // push address 1
+        pair(1, result1Address)
+        // load
+        single(3)
+        // call println function
+        pair(5, 2)
+        // call A equals b
+        pair(5, 1)
+        // store
+        single(4)
     }
 
     val result = machine.load(result1Address) == 11

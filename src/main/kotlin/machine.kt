@@ -1,23 +1,33 @@
 package com.github.cheng;
 
+import kotlin.experimental.ExperimentalTypeInference
+
 class Machine {
     // initialize stack
-    private val stack: IntArray = IntArray(STACK_MAX_SIZE) { 0 }
+    internal val stack: IntArray
 
     // stack pointer
-    private var sp: Int = 0
+    internal var sp: Int = 0
 
     // initialize heap
-    private val heap: IntArray = IntArray(HEAP_MAX_SIZE) { 0 }
+    internal val heap: IntArray
 
     // functions...
-    private val functions: Array<Func>
+    internal val functions: Array<Func>
 
     /**
      * Initialize machine with functions
      */
     constructor(functions: Array<Func>) {
         this.functions = functions
+        this.stack = IntArray(STACK_MAX_SIZE) { 0 }
+        this.heap = IntArray(HEAP_MAX_SIZE) { 0 }
+    }
+
+    constructor(functions: Array<Func>, maxStack: Int, maxHeap: Int) {
+        this.functions = functions
+        this.stack = IntArray(maxStack)
+        this.heap = IntArray(maxHeap)
     }
 
 
@@ -56,6 +66,7 @@ class Machine {
                     when (cause.because) {
                         is Because.InstructionException -> {
                             println("System Instruction error : ${cause.because.instruction}")
+                            throw cause
                         }
 
                         Because.Return -> {
@@ -71,11 +82,12 @@ class Machine {
 
             is NativeFunction -> {
                 try {
-                    func.call.invoke(args)
+                    func.call.invoke(this, args)
                 } catch (cause: Break) {
                     when (cause.because) {
                         is Because.InstructionException -> {
                             println("System Instruction error : ${cause.because.instruction}")
+                            throw cause
                         }
 
                         Because.Return -> {
@@ -225,7 +237,25 @@ class Machine {
         }
     }
 
-    companion object;
+    companion object {
+
+        class MachineBuilder(var maxStack: Int, var maxHeap: Int, var functions: Array<Func>)
+
+        fun MachineBuilder.create(): Machine {
+            if (this.maxStack <= 0 || this.maxHeap <= 0) {
+                throw IllegalArgumentException("error stack or heap size")
+            }
+            return Machine(functions, maxStack, maxHeap)
+        }
+
+        fun new(): MachineBuilder {
+            return MachineBuilder(STACK_MAX_SIZE, HEAP_MAX_SIZE, emptyArray())
+        }
+
+        fun defaultNew(functions: Array<Func>): Machine {
+            return Machine(functions)
+        }
+    }
 
     private fun binOp(logic: (left: Int, right: Int) -> Int) {
         val left = this.pop()
@@ -272,12 +302,12 @@ data class NativeFunction(
     override val funcName: String,
     override val nprams: Int,
     override val returns: Boolean,
-    val call: (IntArray) -> Unit
+    val call: Machine.(IntArray) -> Unit
 ) :
     Func(funcName, nprams, returns)
 
 /**
- * Instruction op:1 args:1 args1:0 should be push 1 on stack
+ * 一个指令模型
  */
 data class Instruction(val op: Int, val args: Int, val args1: Int, val body: Array<Instruction>?) {
     constructor(op: Int) : this(op, 0, 0, null)
@@ -291,11 +321,83 @@ data class Instruction(val op: Int, val args: Int, val args1: Int, val body: Arr
     }
 }
 
+/**
+ * 执行中断
+ */
 class Break(val because: Because) : Throwable()
 
+/**
+ * 中断原因
+ */
 sealed class Because {
+    /**
+     * 方法返回
+     */
     data object Return : Because()
+
+    /**
+     * 指令错误
+     */
     class InstructionException(val instruction: Instruction) : Because()
+
+    /**
+     * 方法应返回一个值，但没有返回
+     */
     data class FunctionEmptyReturn(val fname: String) : Because()
+
+    /**
+     * 不在方法里调用local指令
+     */
     data object LocalsIsNull : Because()
+}
+
+/**
+ * 一个指令的快捷构建方法
+ * ```
+ * buildInstruction {
+ *    pair(6, 0)
+ *    pair(6, 1)
+ *    single(9)
+ *    single(8)
+ * }
+ * ```
+ */
+@OptIn(ExperimentalTypeInference::class)
+fun buildInstruction(@BuilderInference scope: InstructionBuildScope.() -> Unit): Array<Instruction> {
+    return InstructionBuildScope().apply(scope).toArray()
+}
+
+class InstructionBuildScope {
+    internal var list: MutableList<Instruction> = arrayListOf()
+
+    fun single(op: Int) {
+        add(Instruction(op))
+    }
+
+    fun pair(op: Int, arg: Int) {
+        add(Instruction(op, arg))
+    }
+
+    fun add(instruction: Instruction) {
+        list.add(instruction)
+    }
+
+    internal fun toArray(): Array<Instruction> {
+        return list.toTypedArray()
+    }
+}
+
+fun Machine.run(code: Array<Instruction>) {
+    try {
+        this.execute(code, null)
+    } catch (e: Break) {
+        if (e.because !is Because.Return) {
+            throw e
+        }
+    }
+}
+
+fun Machine.run(scope: InstructionBuildScope.() -> Unit) {
+    val instructions = buildInstruction(scope)
+    this.run(instructions)
 }
